@@ -1,0 +1,357 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+<title id="title">KOPNOVA — animated cooperative supply-chain landscape</title>
+<desc id="desc">An original, cinematic animated illustration of farmers, fields, a cooperative warehouse, a delivery truck and a buyer market.</desc>
+
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#9ce6b8"/>
+    <stop offset=".48" stop-color="#62c99a"/>
+    <stop offset="1" stop-color="#f6d98a"/>
+  </linearGradient>
+  <linearGradient id="leftShade" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#063f35" stop-opacity=".99"/>
+    <stop offset=".35" stop-color="#075542" stop-opacity=".96"/>
+    <stop offset=".48" stop-color="#075542" stop-opacity=".42"/>
+    <stop offset=".60" stop-color="#075542" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="sunGlow">
+    <stop offset="0" stop-color="#fff9c8" stop-opacity=".95"/>
+    <stop offset=".35" stop-color="#ffe7a0" stop-opacity=".55"/>
+    <stop offset="1" stop-color="#ffe7a0" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="hillBack" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#6cbd83"/>
+    <stop offset="1" stop-color="#328c68"/>
+  </linearGradient>
+  <linearGradient id="hillMid" x1="0" y1="0" x2=".2" y2="1">
+    <stop stop-color="#4aab70"/>
+    <stop offset="1" stop-color="#146d52"/>
+  </linearGradient>
+  <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#a9cf62"/>
+    <stop offset=".42" stop-color="#4c9e50"/>
+    <stop offset="1" stop-color="#145b42"/>
+  </linearGradient>
+  <linearGradient id="fieldLight" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#d4df76"/>
+    <stop offset="1" stop-color="#6ba84f"/>
+  </linearGradient>
+  <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#f6dca1"/>
+    <stop offset="1" stop-color="#b88b58"/>
+  </linearGradient>
+  <linearGradient id="coopWall" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#fff4d8"/>
+    <stop offset=".55" stop-color="#f5dfb3"/>
+    <stop offset="1" stop-color="#d8b985"/>
+  </linearGradient>
+  <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#16785a"/>
+    <stop offset="1" stop-color="#064d3e"/>
+  </linearGradient>
+  <linearGradient id="truckBody" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#fff8dc"/>
+    <stop offset="1" stop-color="#d8efc8"/>
+  </linearGradient>
+  <linearGradient id="shirtTeal" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#35b995"/>
+    <stop offset="1" stop-color="#08775e"/>
+  </linearGradient>
+  <linearGradient id="shirtGold" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#f7c65f"/>
+    <stop offset="1" stop-color="#d88935"/>
+  </linearGradient>
+  <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#eebd8a"/>
+    <stop offset="1" stop-color="#bd7950"/>
+  </linearGradient>
+  <linearGradient id="marketRoof" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#ffcf65"/>
+    <stop offset="1" stop-color="#e89a3d"/>
+  </linearGradient>
+  <pattern id="roofTiles" width="38" height="22" patternUnits="userSpaceOnUse">
+    <path d="M0 21 Q19 2 38 21" fill="none" stroke="#6cae85" stroke-opacity=".28" stroke-width="2"/>
+  </pattern>
+  <filter id="softShadow" x="-30%" y="-30%" width="160%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="14"/>
+    <feOffset dy="15"/>
+    <feComponentTransfer><feFuncA type="linear" slope=".25"/></feComponentTransfer>
+    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="smallShadow" x="-30%" y="-30%" width="160%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+    <feOffset dy="6"/>
+    <feComponentTransfer><feFuncA type="linear" slope=".22"/></feComponentTransfer>
+    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+    <feGaussianBlur stdDeviation="22"/>
+  </filter>
+  <clipPath id="sceneClip"><rect width="1920" height="1080" rx="0"/></clipPath>
+</defs>
+
+<style>
+  .birds { animation: birdFlight 22s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+  @keyframes birdFlight { from { transform:translate(-18px,8px); } to { transform:translate(32px,-14px); } }
+  .cloud { animation: cloudDrift 34s ease-in-out infinite alternate; }
+  .cloud.slow { animation-duration: 46s; animation-direction: alternate-reverse; }
+  .sunAura { animation: sunPulse 7s ease-in-out infinite; transform-origin: 1515px 220px; }
+  .ray { animation: rayBreath 8s ease-in-out infinite; transform-origin: 1515px 220px; }
+  .leafFloat { animation: leafFloat 8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .leafFloat.delay { animation-delay: -3s; }
+  .plantSway { animation: plantSway 4.5s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom center; }
+  .plantSway.delay { animation-delay: -2.2s; }
+  .truckMove { animation: truckBob 5s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+  .farmerMove { animation: farmerBreathe 3.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+  .farmerMove.delay { animation-delay: -1.7s; }
+  .routeDash { animation: dashFlow 18s linear infinite; }
+  .sparkle { animation: sparkle 3.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .sparkle.delay { animation-delay: -1.9s; }
+  @keyframes cloudDrift { from { transform: translateX(-26px); } to { transform: translateX(42px); } }
+  @keyframes sunPulse { 0%,100% { opacity:.65; transform:scale(.96); } 50% { opacity:1; transform:scale(1.06); } }
+  @keyframes rayBreath { 0%,100% { opacity:.16; } 50% { opacity:.32; } }
+  @keyframes leafFloat { 0%,100% { transform:translate(0,0) rotate(-8deg); } 50% { transform:translate(13px,-18px) rotate(13deg); } }
+  @keyframes plantSway { 0%,100% { transform:rotate(-2deg); } 50% { transform:rotate(3deg); } }
+  @keyframes truckBob { 0%,100% { transform:translate(0,0); } 50% { transform:translate(10px,-6px); } }
+  @keyframes farmerBreathe { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
+  @keyframes dashFlow { to { stroke-dashoffset:-240; } }
+  @keyframes sparkle { 0%,100% { opacity:.25; transform:scale(.7); } 50% { opacity:1; transform:scale(1.18); } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; }
+  }
+</style>
+
+<g clip-path="url(#sceneClip)">
+  <!-- Sky and cinematic light -->
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <circle cx="1515" cy="220" r="330" fill="url(#sunGlow)" class="sunAura"/>
+  <g class="ray" opacity=".2" stroke="#fff5c7" stroke-width="22" stroke-linecap="round">
+    <path d="M1515 220 L1185 25"/><path d="M1515 220 L1300 -55"/><path d="M1515 220 L1640 -90"/>
+    <path d="M1515 220 L1835 45"/><path d="M1515 220 L1875 345"/>
+  </g>
+  <circle cx="1515" cy="220" r="94" fill="#fff3bd" opacity=".88"/>
+  <circle cx="1515" cy="220" r="74" fill="#ffdc83" opacity=".65"/>
+
+  <!-- distant clouds -->
+  <g class="cloud" fill="#fff9df" opacity=".8">
+    <path d="M1180 185 C1180 158 1202 139 1229 141 C1241 111 1282 101 1300 130 C1331 121 1359 143 1357 171 C1382 180 1386 211 1363 223 L1199 223 C1175 216 1165 199 1180 185Z"/>
+  </g>
+  <g class="cloud slow" fill="#fffdf0" opacity=".72">
+    <path d="M1620 370 C1620 346 1640 329 1663 333 C1672 303 1711 295 1731 320 C1758 312 1784 330 1786 355 C1811 362 1818 390 1794 404 L1640 404 C1618 398 1607 383 1620 370Z"/>
+  </g>
+  <g class="cloud slow" fill="#e8fff0" opacity=".52">
+    <path d="M940 215 C944 195 961 184 982 187 C994 159 1032 157 1048 181 C1074 175 1098 194 1095 218 C1118 229 1114 250 1094 258 L961 258 C938 253 929 232 940 215Z"/>
+  </g>
+
+
+  <!-- distant birds: small animated silhouettes add life without competing with the headline -->
+  <g class="birds" fill="none" stroke="#286e57" stroke-width="5" stroke-linecap="round" opacity=".72">
+    <path d="M1350 340 Q1365 324 1380 340 Q1395 324 1410 340"/>
+    <path d="M1430 382 Q1442 369 1454 382 Q1466 369 1478 382" stroke-width="4"/>
+    <path d="M1288 390 Q1298 379 1308 390 Q1318 379 1328 390" stroke-width="3.5"/>
+  </g>
+\n  <!-- distant mountain ridges -->
+  <path d="M0 620 L170 450 L305 540 L500 355 L665 525 L820 385 L1000 565 L1170 395 L1340 540 L1510 365 L1680 535 L1820 410 L1920 500 L1920 790 L0 790Z" fill="#8bc68e" opacity=".55"/>
+  <path d="M0 675 L170 530 L330 625 L510 445 L675 625 L850 465 L1015 645 L1190 475 L1370 625 L1535 455 L1710 620 L1875 500 L1920 540 L1920 850 L0 850Z" fill="url(#hillBack)"/>
+  <path d="M0 735 C180 620 320 700 485 625 C640 550 770 640 920 595 C1080 545 1195 620 1350 570 C1510 515 1680 625 1920 550 L1920 900 L0 900Z" fill="#4eaa73"/>
+  <path d="M0 790 C210 680 360 760 550 690 C735 620 860 725 1040 665 C1230 600 1380 720 1550 650 C1710 590 1825 675 1920 640 L1920 930 L0 930Z" fill="url(#hillMid)"/>
+
+  <!-- orchard / tree silhouettes -->
+  <g opacity=".78">
+    <g fill="#176c4e">
+      <circle cx="1120" cy="595" r="62"/><circle cx="1160" cy="570" r="54"/><circle cx="1080" cy="570" r="44"/>
+      <circle cx="1840" cy="555" r="72"/><circle cx="1795" cy="575" r="55"/><circle cx="1880" cy="590" r="58"/>
+      <circle cx="990" cy="630" r="48"/><circle cx="1025" cy="610" r="42"/>
+    </g>
+    <g fill="#75bd68" opacity=".75">
+      <circle cx="1100" cy="563" r="27"/><circle cx="1154" cy="545" r="24"/><circle cx="1816" cy="535" r="28"/><circle cx="1873" cy="563" r="27"/>
+    </g>
+  </g>
+
+  <!-- layered fields -->
+  <path d="M0 755 C230 690 390 770 610 710 C850 640 1010 755 1210 690 C1430 620 1640 750 1920 670 L1920 1080 L0 1080Z" fill="url(#field)"/>
+  <path d="M0 840 C230 755 430 830 650 770 C875 705 1040 825 1270 760 C1500 695 1690 815 1920 735" fill="none" stroke="#c7d96e" stroke-width="24" opacity=".6"/>
+  <path d="M0 920 C240 820 425 920 660 850 C900 780 1050 910 1290 835 C1510 765 1720 890 1920 810" fill="none" stroke="#d6df7c" stroke-width="18" opacity=".44"/>
+  <path d="M0 1000 C250 895 480 1005 720 925 C960 850 1130 1000 1370 910 C1590 825 1760 950 1920 875" fill="none" stroke="#0f6a4a" stroke-width="28" opacity=".5"/>
+  <g fill="none" stroke="#c6d96b" stroke-width="7" opacity=".55">
+    <path d="M730 1080 Q1000 850 1300 840"/><path d="M870 1080 Q1120 870 1435 850"/><path d="M1030 1080 Q1270 895 1575 875"/>
+    <path d="M1190 1080 Q1430 920 1715 905"/><path d="M1370 1080 Q1580 945 1850 925"/>
+  </g>
+
+  <!-- winding road, from farm to co-op to market -->
+  <path d="M600 1020 C720 875 840 865 965 845 C1100 825 1140 890 1275 855 C1435 815 1535 780 1680 740 C1780 712 1845 715 1935 735"
+        fill="none" stroke="#8d704c" stroke-width="104" stroke-linecap="round" opacity=".28"/>
+  <path d="M600 1002 C720 858 840 848 965 828 C1100 808 1140 873 1275 838 C1435 798 1535 763 1680 723 C1780 695 1845 698 1935 718"
+        fill="none" stroke="url(#road)" stroke-width="88" stroke-linecap="round" filter="url(#smallShadow)"/>
+  <path d="M600 1002 C720 858 840 848 965 828 C1100 808 1140 873 1275 838 C1435 798 1535 763 1680 723 C1780 695 1845 698 1935 718"
+        fill="none" stroke="#fff1c8" stroke-width="5" stroke-linecap="round" stroke-dasharray="20 25" opacity=".8"/>
+
+  <!-- cooperative warehouse -->
+  <g filter="url(#softShadow)">
+    <ellipse cx="1452" cy="783" rx="310" ry="48" fill="#073f35" opacity=".28"/>
+    <path d="M1185 595 L1455 445 L1732 595 L1732 815 L1185 815Z" fill="url(#coopWall)" stroke="#e9d3a7" stroke-width="5"/>
+    <path d="M1140 602 L1455 420 L1780 602 L1730 635 L1455 478 L1190 635Z" fill="url(#roof)"/>
+    <path d="M1190 604 L1455 455 L1730 604" fill="none" stroke="#55b88a" stroke-width="13" opacity=".75"/>
+    <path d="M1200 614 L1455 484 L1718 614" fill="none" stroke="#0b5a45" stroke-width="8"/>
+    <path d="M1210 615 L1455 490 L1710 615 L1710 650 L1455 520 L1210 650Z" fill="#f7e9c8" opacity=".48"/>
+    <path d="M1205 626 L1455 510 L1708 626" fill="none" stroke="#fff8df" stroke-width="7" opacity=".62"/>
+    <rect x="1242" y="650" width="112" height="125" rx="12" fill="#247d69"/>
+    <rect x="1254" y="662" width="88" height="100" rx="7" fill="#a8e2c8"/>
+    <path d="M1298 662 V762 M1254 712 H1342" stroke="#f4f4d8" stroke-width="10"/>
+    <rect x="1505" y="638" width="112" height="177" rx="8" fill="#0d5c49"/>
+    <rect x="1518" y="650" width="86" height="165" rx="5" fill="#1c765c"/>
+    <path d="M1560 650 V815" stroke="#c8dfb6" stroke-width="7"/>
+    <circle cx="1544" cy="738" r="6" fill="#f6d36f"/><circle cx="1577" cy="738" r="6" fill="#f6d36f"/>
+    <rect x="1640" y="660" width="45" height="88" rx="8" fill="#72b998"/>
+    <rect x="1648" y="668" width="29" height="72" rx="4" fill="#d9f2d9"/>
+    <rect x="1328" y="545" width="255" height="58" rx="20" fill="#fff2d3" stroke="#d9b879" stroke-width="3"/>
+    <circle cx="1365" cy="574" r="20" fill="#f0c65e"/>
+    <path d="M1355 575 Q1365 554 1375 575 Q1365 595 1355 575Z" fill="#fff7d7"/>
+    <path d="M1365 558 V590" stroke="#16845e" stroke-width="5"/>
+    <text x="1400" y="582" font-family="Arial, sans-serif" font-size="24" font-weight="800" fill="#155b46" letter-spacing="1">KOPERASI</text>
+    <path d="M1188 814 H1730" stroke="#c69d68" stroke-width="10" opacity=".6"/>
+    <path d="M1188 815 L1210 842 H1710 L1730 815" fill="#d3b27f"/>
+  </g>
+
+  <!-- small buyer market at far right -->
+  <g filter="url(#smallShadow)">
+    <ellipse cx="1820" cy="835" rx="150" ry="27" fill="#073f35" opacity=".24"/>
+    <path d="M1737 650 L1818 586 L1900 650 V816 H1737Z" fill="#fff1d3"/>
+    <path d="M1717 655 L1818 565 L1920 655 L1898 676 L1818 606 L1739 676Z" fill="url(#marketRoof)"/>
+    <path d="M1745 666 H1890 V703 H1745Z" fill="#fff8df"/>
+    <path d="M1745 666 H1774 V703 H1745Z M1803 666 H1832 V703 H1803Z M1861 666 H1890 V703 H1861Z" fill="#e6a14a"/>
+    <rect x="1760" y="712" width="117" height="104" rx="8" fill="#226e50"/>
+    <rect x="1770" y="722" width="97" height="84" rx="4" fill="#d5efc5"/>
+    <path d="M1770 760 H1867" stroke="#fff5d6" stroke-width="6"/>
+    <g>
+      <circle cx="1790" cy="747" r="12" fill="#e9a83d"/><circle cx="1819" cy="747" r="12" fill="#e36d4e"/><circle cx="1848" cy="747" r="12" fill="#6db45b"/>
+      <path d="M1788 734 Q1792 726 1799 732 M1817 734 Q1822 725 1828 732 M1846 734 Q1852 725 1858 733" stroke="#27794e" stroke-width="4" fill="none"/>
+    </g>
+    <rect x="1794" y="780" width="48" height="36" rx="5" fill="#9c6a43"/>
+  </g>
+
+  <!-- animated dotted supply-chain route -->
+  <path d="M815 745 C990 640 1110 650 1240 665 C1380 680 1510 665 1630 610 C1700 580 1765 600 1815 650"
+        fill="none" stroke="#fff4bf" stroke-width="8" stroke-linecap="round" stroke-dasharray="2 24" class="routeDash" opacity=".95"/>
+  <g filter="url(#smallShadow)">
+    <circle cx="815" cy="745" r="27" fill="#fff2c8"/><circle cx="815" cy="745" r="15" fill="#f1b94f"/>
+    <circle cx="1455" cy="665" r="27" fill="#fff2c8"/><circle cx="1455" cy="665" r="15" fill="#16a77a"/>
+    <circle cx="1815" cy="650" r="27" fill="#fff2c8"/><circle cx="1815" cy="650" r="15" fill="#f0a13e"/>
+  </g>
+
+  <!-- delivery truck -->
+  <g transform="translate(250 0)"><g class="truckMove" filter="url(#smallShadow)">
+    <ellipse cx="1090" cy="888" rx="175" ry="25" fill="#124c3a" opacity=".28"/>
+    <rect x="940" y="766" width="210" height="100" rx="17" fill="url(#truckBody)" stroke="#e1e8c9" stroke-width="5"/>
+    <path d="M1150 798 H1210 L1260 850 V866 H1150Z" fill="#f7f0d5" stroke="#d9e8c8" stroke-width="5"/>
+    <path d="M1170 808 H1203 L1234 842 H1170Z" fill="#8bd2b7"/>
+    <rect x="968" y="790" width="155" height="17" rx="8" fill="#16a77a"/>
+    <path d="M968 821 H1120" stroke="#b3d8a6" stroke-width="7"/>
+    <circle cx="1000" cy="874" r="30" fill="#164b3e"/><circle cx="1000" cy="874" r="15" fill="#dce8d0"/>
+    <circle cx="1190" cy="874" r="30" fill="#164b3e"/><circle cx="1190" cy="874" r="15" fill="#dce8d0"/>
+    <rect x="990" y="735" width="43" height="42" rx="8" fill="#dba45a"/>
+    <path d="M1004 742 Q1011 724 1028 740" fill="#64a75a"/>
+    <rect x="1040" y="748" width="44" height="30" rx="8" fill="#f2bd53"/>
+    <path d="M1048 748 Q1060 727 1074 748" fill="#4b9a57"/>
+    <rect x="1090" y="756" width="39" height="24" rx="7" fill="#e77d4d"/>
+    <path d="M1098 756 Q1110 739 1121 756" fill="#4e9a56"/>
+    <path d="M1220 853 L1245 853" stroke="#fff5c8" stroke-width="8" stroke-linecap="round"/>
+  </g></g>
+
+  <!-- farmer 1: expressive original character -->
+  <g transform="translate(300 0)"><g class="farmerMove" filter="url(#smallShadow)">
+    <ellipse cx="700" cy="1000" rx="92" ry="17" fill="#0b4d3c" opacity=".3"/>
+    <!-- legs and boots -->
+    <path d="M678 922 L675 982 Q658 995 669 1002 H709 Q717 990 696 981 L704 928Z" fill="#315b47"/>
+    <path d="M710 924 L720 982 Q707 997 722 1004 H761 Q768 991 744 979 L739 922Z" fill="#315b47"/>
+    <path d="M666 993 Q686 986 710 999 L711 1011 H666Z M718 994 Q741 985 764 998 L765 1011 H718Z" fill="#684a36"/>
+    <!-- body -->
+    <path d="M663 831 Q700 811 737 835 L754 925 Q701 948 650 925Z" fill="url(#shirtGold)" stroke="#b9793e" stroke-width="4"/>
+    <path d="M664 850 Q637 871 633 914" stroke="#bd8051" stroke-width="22" stroke-linecap="round" fill="none"/>
+    <path d="M736 850 Q760 868 771 897" stroke="#bd8051" stroke-width="22" stroke-linecap="round" fill="none"/>
+    <!-- neck and face -->
+    <rect x="686" y="810" width="29" height="32" rx="12" fill="url(#skin)"/>
+    <ellipse cx="700" cy="786" rx="48" ry="54" fill="url(#skin)" stroke="#a96e4b" stroke-width="3"/>
+    <ellipse cx="681" cy="787" rx="7" ry="10" fill="#fff7df"/><ellipse cx="719" cy="787" rx="7" ry="10" fill="#fff7df"/>
+    <circle cx="683" cy="789" r="4.5" fill="#263c34"/><circle cx="720" cy="789" r="4.5" fill="#263c34"/>
+    <path d="M685 813 Q700 826 718 812" fill="none" stroke="#7a4436" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="666" cy="803" rx="10" ry="6" fill="#e78c74" opacity=".45"/><ellipse cx="735" cy="803" rx="10" ry="6" fill="#e78c74" opacity=".45"/>
+    <!-- hat -->
+    <path d="M645 765 Q650 720 700 717 Q750 720 756 765 Q700 779 645 765Z" fill="#d6a34d" stroke="#a87537" stroke-width="4"/>
+    <path d="M630 769 Q700 746 770 769 Q764 788 700 790 Q640 789 630 769Z" fill="#efc36b" stroke="#b17d3e" stroke-width="4"/>
+    <path d="M660 750 Q700 732 741 750" fill="none" stroke="#fff0bb" stroke-width="6" opacity=".55"/>
+    <!-- hand holding produce -->
+    <path d="M770 897 Q791 904 805 888" stroke="#bd8051" stroke-width="19" stroke-linecap="round" fill="none"/>
+    <circle cx="809" cy="885" r="13" fill="url(#skin)"/>
+  </g></g>
+
+  <!-- farmer 2, slightly smaller and deeper in scene -->
+  <g transform="translate(265 0)"><g class="farmerMove delay" filter="url(#smallShadow)">
+    <ellipse cx="855" cy="956" rx="65" ry="14" fill="#0b4d3c" opacity=".28"/>
+    <path d="M838 894 L833 940 H852 L860 900 M873 897 L882 940 H901 L894 892" fill="#315b47" stroke="#315b47" stroke-width="12" stroke-linecap="round"/>
+    <path d="M828 936 Q844 932 858 942 V952 H824Z M875 938 Q892 930 908 944 V952 H875Z" fill="#6c4b36"/>
+    <path d="M830 842 Q858 827 886 843 L897 910 Q861 927 818 909Z" fill="url(#shirtTeal)" stroke="#0b7258" stroke-width="3"/>
+    <path d="M831 855 Q812 876 814 900" stroke="#bd8051" stroke-width="16" stroke-linecap="round" fill="none"/>
+    <path d="M886 855 Q906 871 910 892" stroke="#bd8051" stroke-width="16" stroke-linecap="round" fill="none"/>
+    <rect x="847" y="821" width="22" height="26" rx="9" fill="url(#skin)"/>
+    <ellipse cx="858" cy="800" rx="38" ry="43" fill="url(#skin)" stroke="#a96e4b" stroke-width="3"/>
+    <ellipse cx="844" cy="801" rx="5.5" ry="8" fill="#fff7df"/><ellipse cx="873" cy="801" rx="5.5" ry="8" fill="#fff7df"/>
+    <circle cx="845" cy="803" r="3.8" fill="#263c34"/><circle cx="874" cy="803" r="3.8" fill="#263c34"/>
+    <path d="M846 821 Q859 832 874 820" fill="none" stroke="#7a4436" stroke-width="4" stroke-linecap="round"/>
+    <path d="M817 778 Q825 740 859 739 Q892 742 900 778Z" fill="#2c7654" stroke="#185b43" stroke-width="4"/>
+    <path d="M806 782 Q859 765 911 783 Q904 798 859 799 Q817 797 806 782Z" fill="#3c9665"/>
+  </g></g>
+
+  <!-- harvest crates and vegetables -->
+  <g transform="translate(270 0)"><g filter="url(#smallShadow)">
+    <rect x="770" y="920" width="80" height="58" rx="7" fill="#a96b3e" stroke="#75482e" stroke-width="5"/>
+    <path d="M778 936 H842 M778 954 H842" stroke="#e4b16d" stroke-width="6"/>
+    <path d="M785 920 Q788 897 805 907 Q816 884 830 907 Q846 901 844 920Z" fill="#5ba85d"/>
+    <circle cx="805" cy="911" r="13" fill="#e76d4d"/><circle cx="831" cy="910" r="13" fill="#f1b94c"/>
+    <rect x="890" y="936" width="58" height="42" rx="6" fill="#9c623a" stroke="#75482e" stroke-width="4"/>
+    <path d="M898 949 H940 M898 964 H940" stroke="#e4b16d" stroke-width="5"/>
+    <circle cx="907" cy="932" r="12" fill="#6ebd61"/><circle cx="929" cy="931" r="12" fill="#e76d4d"/>
+  </g></g>
+
+  <!-- foreground crop plants with gentle motion -->
+  <g class="plantSway">
+    <path d="M250 1080 Q285 990 305 900" fill="none" stroke="#236e45" stroke-width="12" stroke-linecap="round"/>
+    <path d="M302 946 Q235 886 197 932 Q237 985 302 946Z" fill="#72bd5e" stroke="#267a49" stroke-width="5"/>
+    <path d="M300 967 Q354 900 400 930 Q373 989 300 967Z" fill="#3d9955" stroke="#267a49" stroke-width="5"/>
+    <path d="M301 945 Q248 930 215 938 M302 967 Q350 945 384 936" fill="none" stroke="#c8dc78" stroke-width="4"/>
+  </g>
+  <g class="plantSway delay">
+    <path d="M490 1080 Q505 1005 540 938" fill="none" stroke="#276e43" stroke-width="11" stroke-linecap="round"/>
+    <path d="M535 963 Q475 916 445 958 Q479 1003 535 963Z" fill="#6ebd58" stroke="#287b49" stroke-width="5"/>
+    <path d="M536 973 Q586 916 623 949 Q595 998 536 973Z" fill="#3f9d56" stroke="#287b49" stroke-width="5"/>
+  </g>
+  <g class="plantSway">
+    <path d="M1830 1080 Q1815 985 1782 916" fill="none" stroke="#286e46" stroke-width="12" stroke-linecap="round"/>
+    <path d="M1787 956 Q1724 909 1694 950 Q1738 994 1787 956Z" fill="#70bd5c" stroke="#287b49" stroke-width="5"/>
+    <path d="M1784 970 Q1835 907 1882 938 Q1855 994 1784 970Z" fill="#48a65a" stroke="#287b49" stroke-width="5"/>
+  </g>
+
+  <!-- floating leaves and pollen -->
+  <g class="leafFloat" fill="#e2f4a1" opacity=".9">
+    <path d="M1035 465 Q1070 418 1100 442 Q1080 484 1035 465Z"/>
+    <path d="M1064 454 L1090 440" stroke="#77b86a" stroke-width="3" fill="none"/>
+  </g>
+  <g class="leafFloat delay" fill="#f6e59a" opacity=".95">
+    <path d="M1665 485 Q1692 444 1722 463 Q1700 500 1665 485Z"/>
+    <path d="M1680 481 L1715 465" stroke="#d8b85c" stroke-width="3" fill="none"/>
+  </g>
+  <g class="sparkle" fill="#fff7ce">
+    <circle cx="1115" cy="360" r="5"/><circle cx="1760" cy="470" r="4"/><circle cx="1285" cy="400" r="3"/>
+  </g>
+  <g class="sparkle delay" fill="#fff7ce">
+    <circle cx="1600" cy="520" r="5"/><circle cx="1010" cy="540" r="4"/><circle cx="1870" cy="460" r="3"/>
+  </g>
+
+  <!-- left text-safe zone -->
+  <rect width="1110" height="1080" fill="url(#leftShade)"/>
+  <path d="M0 930 C220 855 410 930 600 870 C750 820 865 860 1010 815" fill="none" stroke="#55a57c" stroke-width="3" opacity=".18"/>
+  <circle cx="140" cy="160" r="3" fill="#d4f1cf" opacity=".35"/>
+  <circle cx="360" cy="270" r="5" fill="#d4f1cf" opacity=".2"/>
+  <circle cx="600" cy="140" r="3" fill="#d4f1cf" opacity=".25"/>
+</g>
+</svg>
