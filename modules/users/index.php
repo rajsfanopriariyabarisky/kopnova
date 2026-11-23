@@ -129,7 +129,12 @@ foreach ($users_list as $u) {
                         <button onclick='openEditUserModal(<?= json_encode($u) ?>)' style="background:#FEF3C7; color:#92400E; border:none; padding:7px 11px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; margin-right:4px;">Edit</button>
                         <a href="proses.php?reset_pw=<?= $u['id_user'] ?>" onclick="return confirm('Reset kata sandi akun @<?= htmlspecialchars($u['username']) ?> menjadi default (123)?')" style="background:#E0F2FE; color:#0369A1; text-decoration:none; padding:7px 11px; border-radius:8px; font-weight:700; font-size:12px; margin-right:4px;">Reset Sandi</a>
                         <?php if ($u['id_user'] != $user['id_user']): ?>
-                            <a href="proses.php?hapus=<?= $u['id_user'] ?>" onclick="return confirm('Hapus permanen akun @<?= htmlspecialchars($u['username']) ?>?')" style="background:#FEE2E2; color:#991B1B; text-decoration:none; padding:7px 11px; border-radius:8px; font-weight:700; font-size:12px;">Hapus</a>
+                            <form method="POST" action="proses.php" style="display:inline;" onsubmit="return confirm('Yakin ingin menghapus akun ini?')">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="aksi" value="hapus_user">
+                                <input type="hidden" name="id_user" value="<?= $row['id_user'] ?>">
+                                <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                            </form>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -151,6 +156,7 @@ foreach ($users_list as $u) {
         </div>
 
         <form action="proses.php" method="POST" style="display:flex; flex-direction:column; gap:13px;">
+            <?= csrf_field() ?>
             <input type="hidden" name="aksi" value="tambah_user">
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -228,6 +234,7 @@ foreach ($users_list as $u) {
         </div>
 
         <form action="proses.php" method="POST" style="display:flex; flex-direction:column; gap:13px;">
+            <?= csrf_field() ?>
             <input type="hidden" name="aksi" value="edit_user">
             <input type="hidden" name="id_user" id="edit_id_user">
 

@@ -2,64 +2,77 @@
 require_once '../../config/database.php';
 cekAkses(['konsumen', 'primer']);
 
-$user = $_SESSION['user'] ?? ['id_user' => 1, 'nama_lengkap' => 'Admin Pusat KOPNOVA', 'role' => 'konsumen'];
-$role = $user['role'] ?? 'konsumen';
-
-// Pastikan tabel audit tersedia
-$pdo->exec("CREATE TABLE IF NOT EXISTS `audit_trail_laporan` (
-  `id_audit` int(11) NOT NULL AUTO_INCREMENT,
-  `kode_audit` varchar(35) NOT NULL,
-  `id_user` int(11) NOT NULL,
-  `nama_user` varchar(100) NOT NULL,
-  `role_user` varchar(30) NOT NULL,
-  `jenis_laporan` varchar(100) NOT NULL,
-  `format_file` enum('EXCEL (.XLS)','CSV (.CSV)','PDF PRINT') NOT NULL,
-  `filter_periode` varchar(80) NOT NULL,
-  `ip_address` varchar(45) DEFAULT NULL,
-  `created_at` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`id_audit`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+$user = $_SESSION['user'];
+$role = $user['role'];
 
 $id_divisi = $_GET['id_divisi'] ?? 'all';
-$tgl_mulai = $_GET['tgl_mulai'] ?? date('Y-m-01');
-$tgl_akhir = $_GET['tgl_akhir'] ?? date('Y-m-d');
+$tgl_mulai = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['tgl_mulai'] ?? '') ? $_GET['tgl_mulai'] : date('Y-m-01');
+$tgl_akhir = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['tgl_akhir'] ?? '') ? $_GET['tgl_akhir'] : date('Y-m-d');
 $tujuan    = $_GET['tujuan'] ?? 'Kementerian Koperasi & UKM';
 
+// Fail-closed scoping berdasarkan role
+if ($role === 'primer') {
+    $id_primer_lock    = (int)($user['id_primer'] ?? 0);
+    $where_scope       = " AND kp.id_primer = $id_primer_lock";
+    $where_pr_scope    = " AND pr.id_primer = $id_primer_lock";
+    $where_order_scope = " AND EXISTS (SELECT 1 FROM order_items oi JOIN produk_etalase pr ON oi.id_produk = pr.id_produk WHERE oi.id_order = o.id_order AND pr.id_primer = $id_primer_lock)";
+    $periode_str       = "$tgl_mulai s/d $tgl_akhir (Primer ID-$id_primer_lock)";
+} else {
+    $div_id            = ($id_divisi !== 'all') ? (int)$id_divisi : 0;
+    $where_scope       = ($div_id > 0) ? " AND d.id_divisi = $div_id" : "";
+    $where_pr_scope    = $where_scope;
+    $where_order_scope = ($div_id > 0) ? " AND EXISTS (SELECT 1 FROM order_items oi JOIN produk_etalase pr ON oi.id_produk = pr.id_produk WHERE oi.id_order = o.id_order AND pr.id_divisi = $div_id)" : "";
+    $periode_str       = "$tgl_mulai s/d $tgl_akhir (Divisi: " . ($div_id > 0 ? "ID-$div_id" : 'Nasional') . ")";
+}
+
 // Catat ke Audit Trail
-$kode_audit  = 'AUD-XLS-' . date('YmdHis');
-$periode_str = "$tgl_mulai s/d $tgl_akhir (Divisi: " . ($id_divisi === 'all' ? 'Nasional' : "ID-$id_divisi") . ")";
+$kode_audit = 'AUD-XLS-' . date('YmdHis');
 $pdo->prepare("INSERT INTO audit_trail_laporan (kode_audit, id_user, nama_user, role_user, jenis_laporan, format_file, filter_periode, ip_address) VALUES (?, ?, ?, ?, ?, 'EXCEL (.XLS)', ?, ?)")
     ->execute([$kode_audit, (int)$user['id_user'], $user['nama_lengkap'], $role, "Laporan Eksekutif ($tujuan)", $periode_str, $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
 
-// Query 1: Volume & Nilai Serapan Petani per Kabupaten & Koperasi Primer
-$where_div = ($id_divisi !== 'all') ? " AND d.id_divisi = " . (int)$id_divisi : "";
-$serapan_wilayah = $pdo->query("SELECT d.kode_divisi, d.nama_divisi, d.provinsi, kp.nama_koperasi, kp.kecamatan,
-                                COALESCE(SUM(ps.jumlah), 0) AS total_volume,
-                                COALESCE(SUM(ps.total_nilai), 0) AS total_nilai_serapan,
-                                COUNT(ps.id_pasokan) AS frekuensi_setor
-                                FROM koperasi_primer kp
-                                JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi
-                                LEFT JOIN pasokan_petani ps ON kp.id_primer = ps.id_primer AND ps.status_pasokan = 'Diterima Primer'
-                                WHERE 1=1 $where_div
-                                GROUP BY kp.id_primer
-                                ORDER BY d.nama_divisi ASC, kp.nama_koperasi ASC")->fetchAll();
+// Query 1: Volume & Nilai Serapan Petani (terfilter wilayah & tanggal)
+$stmt1 = $pdo->prepare("SELECT d.kode_divisi, d.nama_divisi, d.provinsi, kp.nama_koperasi, kp.kecamatan,
+                        COALESCE(SUM(ps.jumlah), 0) AS total_volume,
+                        COALESCE(SUM(ps.total_nilai), 0) AS total_nilai_serapan,
+                        COUNT(ps.id_pasokan) AS frekuensi_setor
+                        FROM koperasi_primer kp
+                        JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi
+                        LEFT JOIN pasokan_petani ps ON kp.id_primer = ps.id_primer 
+                             AND ps.status_pasokan = 'Diterima Primer'
+                             AND DATE(ps.tanggal_setor) BETWEEN :tgl_mulai AND :tgl_akhir
+                        WHERE 1=1 $where_scope
+                        GROUP BY kp.id_primer
+                        ORDER BY d.nama_divisi ASC, kp.nama_koperasi ASC");
+$stmt1->execute(['tgl_mulai' => $tgl_mulai, 'tgl_akhir' => $tgl_akhir]);
+$serapan_wilayah = $stmt1->fetchAll();
 
-// Query 2: Omzet & Kinerja Penjualan per Komoditas
-$omzet_komoditas = $pdo->query("SELECT pr.kode_produk, pr.nama_produk, pr.kategori, pr.satuan, pr.harga_jual, pr.stok,
-                                COALESCE(SUM(oi.qty), 0) AS qty_terjual,
-                                COALESCE(SUM(oi.subtotal), 0) AS total_omzet
-                                FROM produk_etalase pr
-                                JOIN divisi_wilayah d ON pr.id_divisi = d.id_divisi
-                                LEFT JOIN order_items oi ON pr.id_produk = oi.id_produk
-                                WHERE 1=1 $where_div
-                                GROUP BY pr.id_produk
-                                ORDER BY total_omzet DESC")->fetchAll();
+// Query 2: Omzet & Kinerja Penjualan per Komoditas (terfilter wilayah & tanggal)
+$stmt2 = $pdo->prepare("SELECT pr.kode_produk, pr.nama_produk, pr.kategori, pr.satuan, pr.harga_jual, pr.stok,
+                        COALESCE(SUM(oi_filtered.qty), 0) AS qty_terjual,
+                        COALESCE(SUM(oi_filtered.subtotal), 0) AS total_omzet
+                        FROM produk_etalase pr
+                        JOIN divisi_wilayah d ON pr.id_divisi = d.id_divisi
+                        LEFT JOIN (
+                            SELECT oi.id_produk, oi.qty, oi.subtotal
+                            FROM order_items oi
+                            JOIN orders o ON oi.id_order = o.id_order
+                            WHERE DATE(o.tanggal_order) BETWEEN :tgl_mulai AND :tgl_akhir
+                        ) oi_filtered ON pr.id_produk = oi_filtered.id_produk
+                        WHERE 1=1 $where_pr_scope
+                        GROUP BY pr.id_produk
+                        ORDER BY total_omzet DESC");
+$stmt2->execute(['tgl_mulai' => $tgl_mulai, 'tgl_akhir' => $tgl_akhir]);
+$omzet_komoditas = $stmt2->fetchAll();
 
-// Query 3: Rincian Transaksi Invoice Masuk
-$transaksi_list = $pdo->query("SELECT o.no_invoice, o.tanggal_order, u.nama_lengkap AS nama_buyer, o.metode_bayar, o.status_order, o.total_bayar
-                               FROM orders o
-                               JOIN users u ON o.id_buyer = u.id_user
-                               ORDER BY o.id_order DESC")->fetchAll();
+// Query 3: Rincian Transaksi Invoice Masuk (terfilter wilayah & tanggal)
+$stmt3 = $pdo->prepare("SELECT o.no_invoice, o.tanggal_order, u.nama_lengkap AS nama_buyer, o.metode_bayar, o.status_order, o.total_bayar
+                        FROM orders o
+                        JOIN users u ON o.id_buyer = u.id_user
+                        WHERE DATE(o.tanggal_order) BETWEEN :tgl_mulai AND :tgl_akhir
+                        $where_order_scope
+                        ORDER BY o.id_order DESC");
+$stmt3->execute(['tgl_mulai' => $tgl_mulai, 'tgl_akhir' => $tgl_akhir]);
+$transaksi_list = $stmt3->fetchAll();
 
 $filename = "Laporan_Eksekutif_KOPNOVA_" . date('Ymd_His') . ".xls";
 header("Content-Type: application/vnd.ms-excel; charset=utf-8");

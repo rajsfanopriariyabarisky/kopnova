@@ -2,19 +2,31 @@
 require_once '../../config/database.php';
 cekAkses(['konsumen', 'primer', 'petani']);
 
-$id = (int)($_GET['id'] ?? 0);
-$stmt = $pdo->prepare("SELECT s.*, o.no_invoice, o.metode_bayar, o.tanggal_order, u.nama_lengkap AS nama_buyer, kp.nama_koperasi, kp.kecamatan, kp.ketua_koperasi, d.nama_divisi
-                       FROM settlement_dana s
-                       JOIN orders o ON s.id_order = o.id_order
-                       JOIN users u ON o.id_buyer = u.id_user
-                       JOIN koperasi_primer kp ON s.id_primer = kp.id_primer
-                       JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi
-                       WHERE s.id_settlement = ?");
-$stmt->execute([$id]);
+$role = $_SESSION['user']['role'];
+$user = $_SESSION['user'];
+$id   = (int)($_GET['id'] ?? 0);
+
+$sql = "SELECT s.*, o.no_invoice, o.metode_bayar, o.tanggal_order, u.nama_lengkap AS nama_buyer, kp.nama_koperasi, kp.kecamatan, kp.ketua_koperasi, d.nama_divisi
+        FROM settlement_dana s
+        JOIN orders o ON s.id_order = o.id_order
+        JOIN users u ON o.id_buyer = u.id_user
+        JOIN koperasi_primer kp ON s.id_primer = kp.id_primer
+        JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi
+        WHERE s.id_settlement = ?";
+
+$params = [$id];
+if (in_array($role, ['primer', 'petani'], true)) {
+    $sql .= " AND s.id_primer = ?";
+    $params[] = (int)($user['id_primer'] ?? 0);
+}
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $stl = $stmt->fetch();
 
 if (!$stl) {
-    die("Bukti pencairan dana tidak ditemukan.");
+    http_response_code(404);
+    die("Bukti pencairan dana tidak ditemukan atau bukan wewenang unit Anda.");
 }
 ?>
 <!DOCTYPE html>

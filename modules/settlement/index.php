@@ -2,25 +2,10 @@
 require_once '../../config/database.php';
 cekAkses(['konsumen', 'primer', 'petani']);
 
-// AUTO-MIGRATE: Buat tabel settlement_dana otomatis jika belum ada
-$pdo->exec("CREATE TABLE IF NOT EXISTS `settlement_dana` (
-  `id_settlement` int(11) NOT NULL AUTO_INCREMENT,
-  `kode_settlement` varchar(35) NOT NULL,
-  `id_order` int(11) NOT NULL,
-  `id_primer` int(11) NOT NULL,
-  `nominal_bruto` decimal(15,2) NOT NULL,
-  `hak_petani` decimal(15,2) NOT NULL,
-  `kas_primer` decimal(15,2) NOT NULL,
-  `kas_konsumen` decimal(15,2) NOT NULL,
-  `status_pencairan` enum('Menunggu Pencairan Pusat','Dicairkan ke Primer','Diteruskan ke Petani') NOT NULL DEFAULT 'Menunggu Pencairan Pusat',
-  `tanggal_cair_primer` datetime DEFAULT NULL,
-  `tanggal_cair_petani` datetime DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id_settlement`),
-  UNIQUE KEY `kode_settlement` (`kode_settlement`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+$role = $_SESSION['user']['role'];
+$user = $_SESSION['user'];
 
-// SINKRONISASI OTOMATIS: Buat entri settlement untuk setiap pesanan berstatus 'Selesai' yang belum tercatat
+// SINKRONISASI OTOMATIS: Agregasi per (id_order, id_primer) tanpa kehilangan nominal beda kategori
 $completed_orders = $pdo->query("SELECT o.id_order, pr.id_primer, pr.kategori, SUM(oi.subtotal) AS bruto
                                  FROM orders o
                                  JOIN order_items oi ON o.id_order = oi.id_order
@@ -28,56 +13,111 @@ $completed_orders = $pdo->query("SELECT o.id_order, pr.id_primer, pr.kategori, S
                                  WHERE o.status_order = 'Selesai'
                                  GROUP BY o.id_order, pr.id_primer, pr.kategori")->fetchAll();
 
+// Kelompokkan terlebih dahulu per (id_order + id_primer) agar pembagian SHU tiap kategori terakumulasi utuh
+$aggregated_settlements = [];
 foreach ($completed_orders as $co) {
+    $pairKey = $co['id_order'] . '_' . $co['id_primer'];
+
+    $stmtReg = $pdo->prepare("SELECT persen_petani, persen_primer, persen_konsumen FROM harga_acuan_shu WHERE kategori = ? AND status_regulasi = 'Aktif' LIMIT 1");
+    $stmtReg->execute([$co['kategori']]);
+    $reg = $stmtReg->fetch();
+
+    $p_petani   = $reg ? (float)$reg['persen_petani'] : 85.00;
+    $p_primer   = $reg ? (float)$reg['persen_primer'] : 10.00;
+
+    $bruto      = (float)$co['bruto'];
+    $h_petani   = round(($bruto * $p_petani) / 100, 2);
+    $k_primer   = round(($bruto * $p_primer) / 100, 2);
+    $k_konsumen = round($bruto - $h_petani - $k_primer, 2);
+
+    if (!isset($aggregated_settlements[$pairKey])) {
+        $aggregated_settlements[$pairKey] = [
+            'id_order'     => (int)$co['id_order'],
+            'id_primer'    => (int)$co['id_primer'],
+            'bruto'        => 0.0,
+            'hak_petani'   => 0.0,
+            'kas_primer'   => 0.0,
+            'kas_konsumen' => 0.0,
+        ];
+    }
+
+    $aggregated_settlements[$pairKey]['bruto']        += $bruto;
+    $aggregated_settlements[$pairKey]['hak_petani']   += $h_petani;
+    $aggregated_settlements[$pairKey]['kas_primer']   += $k_primer;
+    $aggregated_settlements[$pairKey]['kas_konsumen'] += $k_konsumen;
+}
+
+foreach ($aggregated_settlements as $agg) {
     $cek = $pdo->prepare("SELECT COUNT(*) FROM settlement_dana WHERE id_order = ? AND id_primer = ?");
-    $cek->execute([$co['id_order'], $co['id_primer']]);
-    if ($cek->fetchColumn() == 0) {
-        // Ambil rasio SHU aktif berdasarkan kategori jika ada, default 85% : 10% : 5%
-        $stmtReg = $pdo->prepare("SELECT persen_petani, persen_primer, persen_konsumen FROM harga_acuan_shu WHERE kategori = ? AND status_regulasi = 'Aktif' LIMIT 1");
-        $stmtReg->execute([$co['kategori']]);
-        $reg = $stmtReg->fetch();
+    $cek->execute([$agg['id_order'], $agg['id_primer']]);
 
-        $p_petani   = $reg ? (float)$reg['persen_petani'] : 85.00;
-        $p_primer   = $reg ? (float)$reg['persen_primer'] : 10.00;
-        $p_konsumen = $reg ? (float)$reg['persen_konsumen'] : 5.00;
-
-        $bruto = (float)$co['bruto'];
-        $h_petani   = round(($bruto * $p_petani) / 100, 2);
-        $k_primer   = round(($bruto * $p_primer) / 100, 2);
-        $k_konsumen = round($bruto - $h_petani - $k_primer, 2);
-
-        $kode_stl = 'STL-' . date('Ymd') . '-' . $co['id_order'] . '-' . $co['id_primer'];
+    if ((int)$cek->fetchColumn() === 0) {
+        $kode_stl = 'STL-' . date('Ymd') . '-' . $agg['id_order'] . '-' . $agg['id_primer'];
         $ins = $pdo->prepare("INSERT IGNORE INTO settlement_dana (kode_settlement, id_order, id_primer, nominal_bruto, hak_petani, kas_primer, kas_konsumen) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $ins->execute([$kode_stl, $co['id_order'], $co['id_primer'], $bruto, $h_petani, $k_primer, $k_konsumen]);
+        $ins->execute([
+            $kode_stl,
+            $agg['id_order'],
+            $agg['id_primer'],
+            $agg['bruto'],
+            $agg['hak_petani'],
+            $agg['kas_primer'],
+            $agg['kas_konsumen']
+        ]);
     }
 }
 
 // PROSES 1: Pencairan Dana dari Koperasi Konsumen Pusat ke Koperasi Primer
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'cair_ke_primer') {
-    if ($_SESSION['user']['role'] === 'konsumen') {
-        $id_stl = (int)$_POST['id_settlement'];
-        $pdo->prepare("UPDATE settlement_dana SET status_pencairan = 'Dicairkan ke Primer', tanggal_cair_primer = NOW() WHERE id_settlement = ?")
-            ->execute([$id_stl]);
+    verify_csrf();
+    cekAkses(['konsumen']);
+
+    $id_stl = (int)($_POST['id_settlement'] ?? 0);
+    // Kunci transisi status: hanya boleh dari 'Menunggu Pencairan Pusat'
+    $stmt = $pdo->prepare("UPDATE settlement_dana 
+                           SET status_pencairan = 'Dicairkan ke Primer', tanggal_cair_primer = NOW() 
+                           WHERE id_settlement = ? AND status_pencairan = 'Menunggu Pencairan Pusat'");
+    $stmt->execute([$id_stl]);
+
+    if ($stmt->rowCount() > 0) {
         header("Location: index.php?msg=Dana hak pembayaran & kas unit berhasil ditransfer ke rekening Koperasi Primer.");
-        exit;
+    } else {
+        header("Location: index.php?err=Data settlement tidak valid atau sudah dicairkan sebelumnya.");
     }
+    exit;
 }
 
 // PROSES 2: Penerusan Dana dari Koperasi Primer ke Petani Pemasok Hulu
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'teruskan_ke_petani') {
-    if (in_array($_SESSION['user']['role'], ['konsumen', 'primer'])) {
-        $id_stl = (int)$_POST['id_settlement'];
-        $pdo->prepare("UPDATE settlement_dana SET status_pencairan = 'Diteruskan ke Petani', tanggal_cair_primer = COALESCE(tanggal_cair_primer, NOW()), tanggal_cair_petani = NOW() WHERE id_settlement = ?")
-            ->execute([$id_stl]);
-        header("Location: index.php?msg=Dana hasil panen telah resmi diteruskan ke Petani Pemasok.");
-        exit;
+    verify_csrf();
+    cekAkses(['konsumen', 'primer']);
+
+    $id_stl = (int)($_POST['id_settlement'] ?? 0);
+
+    if ($role === 'primer') {
+        $id_primer_login = (int)($user['id_primer'] ?? 0);
+        // Ownership check + state machine check: wajib berstatus 'Dicairkan ke Primer' dan milik primer terkait
+        $stmt = $pdo->prepare("UPDATE settlement_dana 
+                               SET status_pencairan = 'Diteruskan ke Petani', tanggal_cair_petani = NOW() 
+                               WHERE id_settlement = ? AND id_primer = ? AND status_pencairan = 'Dicairkan ke Primer'");
+        $stmt->execute([$id_stl, $id_primer_login]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE settlement_dana 
+                               SET status_pencairan = 'Diteruskan ke Petani', tanggal_cair_petani = NOW() 
+                               WHERE id_settlement = ? AND status_pencairan = 'Dicairkan ke Primer'");
+        $stmt->execute([$id_stl]);
     }
+
+    if ($stmt->rowCount() > 0) {
+        header("Location: index.php?msg=Dana hasil panen telah resmi diteruskan ke Petani Pemasok.");
+    } else {
+        header("Location: index.php?err=Dana belum dicairkan dari pusat atau bukan wewenang koperasi Anda.");
+    }
+    exit;
 }
 
 require_once '../../includes/header.php';
 require_once '../../includes/sidebar.php';
 
-// Ambil data settlement sesuai hak akses role
 $sql = "SELECT s.*, o.no_invoice, o.metode_bayar, o.tanggal_order, u.nama_lengkap AS nama_buyer, kp.nama_koperasi, kp.kecamatan, kp.ketua_koperasi, d.nama_divisi
         FROM settlement_dana s
         JOIN orders o ON s.id_order = o.id_order
@@ -85,13 +125,12 @@ $sql = "SELECT s.*, o.no_invoice, o.metode_bayar, o.tanggal_order, u.nama_lengka
         JOIN koperasi_primer kp ON s.id_primer = kp.id_primer
         JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi";
 
-if (in_array($role, ['primer', 'petani']) && !empty($user['id_primer'])) {
-    $sql .= " WHERE s.id_primer = " . (int)$user['id_primer'];
+if (in_array($role, ['primer', 'petani'], true)) {
+    $sql .= " WHERE s.id_primer = " . (int)($user['id_primer'] ?? 0);
 }
 $sql .= " ORDER BY s.id_settlement DESC";
 $settlements = $pdo->query($sql)->fetchAll();
 
-// Hitung Agregat Keuangan
 $tot_bruto     = 0;
 $tot_petani    = 0;
 $tot_primer    = 0;
@@ -127,6 +166,12 @@ foreach ($settlements as $st) {
 <?php if (isset($_GET['msg'])): ?>
 <div style="background:#DCFCE7; border:1px solid #86EFAC; color:#166534; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; font-size:13.5px;">
     ✓ <?= htmlspecialchars($_GET['msg']) ?>
+</div>
+<?php endif; ?>
+
+<?php if (isset($_GET['err'])): ?>
+<div style="background:#FEE2E2; border:1px solid #FCA5A5; color:#991B1B; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; font-size:13.5px;">
+    ✕ <?= htmlspecialchars($_GET['err']) ?>
 </div>
 <?php endif; ?>
 
@@ -242,6 +287,7 @@ foreach ($settlements as $st) {
                         <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
                             <?php if ($role === 'konsumen' && $st === 'Menunggu Pencairan Pusat'): ?>
                                 <form method="POST" style="margin:0;">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="aksi" value="cair_ke_primer">
                                     <input type="hidden" name="id_settlement" value="<?= $s['id_settlement'] ?>">
                                     <button type="submit" style="background:#059669; color:#FFFFFF; border:none; padding:7px 12px; border-radius:8px; font-weight:700; font-size:11.5px; cursor:pointer; width:175px;">
@@ -250,8 +296,9 @@ foreach ($settlements as $st) {
                                 </form>
                             <?php endif; ?>
 
-                            <?php if (in_array($role, ['konsumen', 'primer']) && $st === 'Dicairkan ke Primer'): ?>
+                            <?php if (in_array($role, ['konsumen', 'primer'], true) && $st === 'Dicairkan ke Primer'): ?>
                                 <form method="POST" style="margin:0;">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="aksi" value="teruskan_ke_petani">
                                     <input type="hidden" name="id_settlement" value="<?= $s['id_settlement'] ?>">
                                     <button type="submit" style="background:#D97706; color:#FFFFFF; border:none; padding:7px 12px; border-radius:8px; font-weight:700; font-size:11.5px; cursor:pointer; width:175px;">

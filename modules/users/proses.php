@@ -2,30 +2,50 @@
 require_once '../../config/database.php';
 cekAkses(['konsumen']);
 
-// 1. TERBITKAN AKUN BARU
-if (isset($_POST['aksi']) && $_POST['aksi'] === 'tambah_user') {
-    $username = trim($_POST['username']);
-    $nama     = trim($_POST['nama_lengkap']);
-    $role     = $_POST['role'];
-    $passRaw  = trim($_POST['password']) ?: '123';
-    $passHash = password_hash($passRaw, PASSWORD_DEFAULT);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: index.php");
+    exit;
+}
 
-    // Cek duplikasi username
-    $cek = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
-    $cek->execute([$username]);
-    if ($cek->fetchColumn() > 0) {
-        header("Location: index.php?err=Username @$username sudah terdaftar. Gunakan username lain.");
+verify_csrf();
+$aksi = $_POST['aksi'] ?? '';
+
+// Helper internal untuk validasi role & konsistensi wilayah
+function normalizeRoleWilayah($role, $rawDivisi, $rawPrimer) {
+    $allowedRoles = ['konsumen', 'primer', 'petani', 'buyer'];
+    if (!in_array($role, $allowedRoles, true)) {
+        header("Location: index.php?err=Role pengguna tidak valid.");
         exit;
     }
 
-    $id_divisi = !empty($_POST['id_divisi']) ? (int)$_POST['id_divisi'] : null;
-    $id_primer = !empty($_POST['id_primer']) ? (int)$_POST['id_primer'] : null;
+    $id_divisi = !empty($rawDivisi) ? (int)$rawDivisi : null;
+    $id_primer = !empty($rawPrimer) ? (int)$rawPrimer : null;
 
     if ($role === 'buyer') {
         $id_divisi = null;
         $id_primer = null;
     } elseif ($role === 'konsumen') {
         $id_primer = null;
+    }
+
+    return [$id_divisi, $id_primer];
+}
+
+// 1. TERBITKAN AKUN BARU
+if ($aksi === 'tambah_user') {
+    $username = trim($_POST['username'] ?? '');
+    $nama     = trim($_POST['nama_lengkap'] ?? '');
+    $role     = $_POST['role'] ?? '';
+    $passRaw  = trim($_POST['password'] ?? '') ?: '123';
+    $passHash = password_hash($passRaw, PASSWORD_DEFAULT);
+
+    [$id_divisi, $id_primer] = normalizeRoleWilayah($role, $_POST['id_divisi'] ?? null, $_POST['id_primer'] ?? null);
+
+    $cek = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+    $cek->execute([$username]);
+    if ($cek->fetchColumn() > 0) {
+        header("Location: index.php?err=Username @$username sudah terdaftar. Gunakan username lain.");
+        exit;
     }
 
     $stmt = $pdo->prepare("INSERT INTO users (id_divisi, id_primer, nama_lengkap, username, password, role, no_hp, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
@@ -36,8 +56,8 @@ if (isset($_POST['aksi']) && $_POST['aksi'] === 'tambah_user') {
         $username,
         $passHash,
         $role,
-        trim($_POST['no_hp']),
-        trim($_POST['alamat'])
+        trim($_POST['no_hp'] ?? ''),
+        trim($_POST['alamat'] ?? '')
     ]);
 
     header("Location: index.php?msg=Akun @$username ($role) berhasil diterbitkan dan siap digunakan login.");
@@ -45,15 +65,14 @@ if (isset($_POST['aksi']) && $_POST['aksi'] === 'tambah_user') {
 }
 
 // 2. EDIT OTORISASI & WILAYAH AKUN
-if (isset($_POST['aksi']) && $_POST['aksi'] === 'edit_user') {
-    $id_user   = (int)$_POST['id_user'];
-    $username  = trim($_POST['username']);
-    $nama      = trim($_POST['nama_lengkap']);
-    $role      = $_POST['role'];
-    $id_divisi = !empty($_POST['id_divisi']) ? (int)$_POST['id_divisi'] : null;
-    $id_primer = !empty($_POST['id_primer']) ? (int)$_POST['id_primer'] : null;
+if ($aksi === 'edit_user') {
+    $id_user  = (int)($_POST['id_user'] ?? 0);
+    $username = trim($_POST['username'] ?? '');
+    $nama     = trim($_POST['nama_lengkap'] ?? '');
+    $role     = $_POST['role'] ?? '';
 
-    // Pastikan username tidak bentrok dengan user lain
+    [$id_divisi, $id_primer] = normalizeRoleWilayah($role, $_POST['id_divisi'] ?? null, $_POST['id_primer'] ?? null);
+
     $cek = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ? AND id_user != ?");
     $cek->execute([$username, $id_user]);
     if ($cek->fetchColumn() > 0) {
@@ -68,8 +87,8 @@ if (isset($_POST['aksi']) && $_POST['aksi'] === 'edit_user') {
         $nama,
         $username,
         $role,
-        trim($_POST['no_hp']),
-        trim($_POST['alamat']),
+        trim($_POST['no_hp'] ?? ''),
+        trim($_POST['alamat'] ?? ''),
         $id_user
     ]);
 
@@ -78,8 +97,8 @@ if (isset($_POST['aksi']) && $_POST['aksi'] === 'edit_user') {
 }
 
 // 3. RESET KATA SANDI KE DEFAULT (123)
-if (isset($_GET['reset_pw'])) {
-    $id_user  = (int)$_GET['reset_pw'];
+if ($aksi === 'reset_pw') {
+    $id_user  = (int)($_POST['id_user'] ?? 0);
     $passHash = password_hash('123', PASSWORD_DEFAULT);
     $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?")->execute([$passHash, $id_user]);
     header("Location: index.php?msg=Kata sandi akun berhasil direset menjadi: 123");
@@ -87,8 +106,8 @@ if (isset($_GET['reset_pw'])) {
 }
 
 // 4. HAPUS AKUN
-if (isset($_GET['hapus'])) {
-    $id_user = (int)$_GET['hapus'];
+if ($aksi === 'hapus_user') {
+    $id_user = (int)($_POST['id_user'] ?? 0);
     if ($id_user === (int)$_SESSION['user']['id_user']) {
         header("Location: index.php?err=Anda tidak dapat menghapus akun yang sedang aktif digunakan.");
         exit;
