@@ -30,6 +30,7 @@ $pasokan_list = $stmt->fetchAll();
 <div style="background:#FFFFFF; padding:24px; border-radius:14px; border:1px solid #E2E8F0; margin-bottom:26px;">
     <h3 style="margin:0 0 16px; font-size:17px; color:#064E3B;">Formulir Kirim Hasil Panen</h3>
     <form action="proses.php" method="POST" enctype="multipart/form-data" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+        <?= csrf_field() ?>
         <input type="hidden" name="aksi" value="setor_petani">
         <div>
             <label style="font-size:12px; font-weight:700; color:#475569;">Koperasi Primer Tujuan</label>

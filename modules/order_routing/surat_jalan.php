@@ -2,27 +2,54 @@
 require_once '../../config/database.php';
 cekAkses(['konsumen', 'primer', 'buyer']);
 
+$role = $_SESSION['user']['role'];
+$user = $_SESSION['user'];
 $id_order = (int)($_GET['id_order'] ?? 0);
 
-$stmt = $pdo->prepare("SELECT o.*, u.nama_lengkap AS nama_buyer, u.no_hp AS hp_buyer 
-                       FROM orders o 
-                       JOIN users u ON o.id_buyer = u.id_user 
-                       WHERE o.id_order = ?");
-$stmt->execute([$id_order]);
+if ($role === 'buyer') {
+    $stmt = $pdo->prepare("SELECT o.*, u.nama_lengkap AS nama_buyer, u.no_hp AS hp_buyer 
+                           FROM orders o 
+                           JOIN users u ON o.id_buyer = u.id_user 
+                           WHERE o.id_order = ? AND o.id_buyer = ?");
+    $stmt->execute([$id_order, (int)$user['id_user']]);
+} elseif ($role === 'primer') {
+    $id_primer_login = (int)($user['id_primer'] ?? 0);
+    $stmt = $pdo->prepare("SELECT o.*, u.nama_lengkap AS nama_buyer, u.no_hp AS hp_buyer 
+                           FROM orders o 
+                           JOIN users u ON o.id_buyer = u.id_user 
+                           WHERE o.id_order = ? AND EXISTS (
+                               SELECT 1 FROM order_items oi 
+                               JOIN produk_etalase pr ON oi.id_produk = pr.id_produk 
+                               WHERE oi.id_order = o.id_order AND pr.id_primer = ?
+                           )");
+    $stmt->execute([$id_order, $id_primer_login]);
+} else {
+    $stmt = $pdo->prepare("SELECT o.*, u.nama_lengkap AS nama_buyer, u.no_hp AS hp_buyer 
+                           FROM orders o 
+                           JOIN users u ON o.id_buyer = u.id_user 
+                           WHERE o.id_order = ?");
+    $stmt->execute([$id_order]);
+}
+
 $order = $stmt->fetch();
 
 if (!$order) {
-    die("Dokumen Surat Jalan tidak ditemukan.");
+    http_response_code(404);
+    die("Dokumen Surat Jalan tidak ditemukan atau Anda tidak memiliki akses.");
 }
 
-// Otomatis generate nomor surat jalan jika dicetak sebelum tombol routing diklik
+// Hanya Koperasi Konsumen yang berhak menerbitkan nomor surat jalan resmi
 if (empty($order['no_surat_jalan'])) {
-    $no_sj = 'SJ-KPN-' . date('Ymd') . '-' . str_pad($id_order, 4, '0', STR_PAD_LEFT);
-    $pdo->prepare("UPDATE orders SET no_surat_jalan = ? WHERE id_order = ?")->execute([$no_sj, $id_order]);
-    $order['no_surat_jalan'] = $no_sj;
+    if ($role === 'konsumen') {
+        $no_sj = 'SJ-KPN-' . date('Ymd') . '-' . str_pad($id_order, 4, '0', STR_PAD_LEFT);
+        $pdo->prepare("UPDATE orders SET no_surat_jalan = ? WHERE id_order = ?")->execute([$no_sj, $id_order]);
+        $order['no_surat_jalan'] = $no_sj;
+    } else {
+        $order['no_surat_jalan'] = 'DRAFT-BELUM-TERBIT';
+    }
 }
 
-$stmtItems = $pdo->prepare("SELECT oi.*, pr.nama_produk, pr.kode_produk, pr.satuan, kp.nama_koperasi, kp.kecamatan, kp.ketua_koperasi, d.nama_divisi 
+$stmtItems = $pdo->prepare("SELECT oi.*, pr.nama_produk, pr.kode_produk, pr.satuan, kp.id_primer, kp.nama_koperasi, kp.kecamatan, kp.ketua_koperasi, d.nama_divisi 
                             FROM order_items oi 
                             JOIN produk_etalase pr ON oi.id_produk = pr.id_produk 
                             JOIN koperasi_primer kp ON pr.id_primer = kp.id_primer 

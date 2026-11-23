@@ -2,77 +2,115 @@
 require_once '../../config/database.php';
 cekAkses(['konsumen', 'primer', 'petani']);
 
-// AUTO-MIGRATE: Buat tabel instruksi_pasokan otomatis jika belum ada
-$pdo->exec("CREATE TABLE IF NOT EXISTS `instruksi_pasokan` (
-  `id_instruksi` int(11) NOT NULL AUTO_INCREMENT,
-  `kode_instruksi` varchar(30) NOT NULL,
-  `id_primer` int(11) NOT NULL,
-  `nama_komoditas` varchar(100) NOT NULL,
-  `kategori` enum('Komoditas Tanaman','Saprodi','Alsintan','Produk Olahan','Produk Lainnya') NOT NULL,
-  `target_jumlah` int(11) NOT NULL,
-  `satuan` varchar(20) NOT NULL,
-  `tingkat_urgensi` enum('Kritis (< 20)','Waspada (< 50)','Prediksi Musiman') DEFAULT 'Waspada (< 50)',
-  `catatan_pusat` text DEFAULT NULL,
-  `status_instruksi` enum('Terkirim ke Primer','Diteruskan ke Petani','Terpenuhi') DEFAULT 'Terkirim ke Primer',
-  `created_at` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`id_instruksi`),
-  UNIQUE KEY `kode_instruksi` (`kode_instruksi`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+$role = $_SESSION['user']['role'];
+$user = $_SESSION['user'];
 
 // PROSES 1: Kirim Instruksi Pengadaan Pasokan dari Konsumen Pusat ke Koperasi Primer
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'kirim_instruksi') {
-    if ($_SESSION['user']['role'] === 'konsumen') {
-        $kode = 'EWS-' . date('ymd') . '-' . rand(100, 999);
-        $stmt = $pdo->prepare("INSERT INTO instruksi_pasokan (kode_instruksi, id_primer, nama_komoditas, kategori, target_jumlah, satuan, tingkat_urgensi, catatan_pusat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $kode,
-            (int)$_POST['id_primer'],
-            trim($_POST['nama_komoditas']),
-            $_POST['kategori'],
-            (int)$_POST['target_jumlah'],
-            trim($_POST['satuan']),
-            $_POST['tingkat_urgensi'],
-            trim($_POST['catatan_pusat'])
-        ]);
-        header("Location: index.php?msg=Instruksi pengadaan pasokan ($kode) berhasil dikirim ke Koperasi Primer.");
+    verify_csrf();
+    cekAkses(['konsumen']);
+
+    $id_primer     = (int)($_POST['id_primer'] ?? 0);
+    $nama_kom      = trim($_POST['nama_komoditas'] ?? '');
+    $kategori      = $_POST['kategori'] ?? '';
+    $target_jumlah = (int)($_POST['target_jumlah'] ?? 0);
+    $satuan        = trim($_POST['satuan'] ?? '');
+    $urgensi       = $_POST['tingkat_urgensi'] ?? '';
+    $catatan       = trim($_POST['catatan_pusat'] ?? '');
+
+    $valid_kategori = ['Komoditas Tanaman', 'Saprodi', 'Alsintan', 'Produk Olahan', 'Produk Lainnya'];
+    $valid_urgensi  = ['Kritis (< 20)', 'Waspada (< 50)', 'Prediksi Musiman'];
+
+    if ($id_primer <= 0 || $nama_kom === '' || $satuan === '' || $target_jumlah <= 0 || !in_array($kategori, $valid_kategori, true) || !in_array($urgensi, $valid_urgensi, true)) {
+        header("Location: index.php?err=Data instruksi pasokan tidak valid. Pastikan target volume > 0 dan semua kolom terisi benar.");
         exit;
     }
+
+    $kode = 'EWS-' . date('ymd') . '-' . random_int(100, 999);
+    $stmt = $pdo->prepare("INSERT INTO instruksi_pasokan (kode_instruksi, id_primer, nama_komoditas, kategori, target_jumlah, satuan, tingkat_urgensi, catatan_pusat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([
+        $kode,
+        $id_primer,
+        $nama_kom,
+        $kategori,
+        $target_jumlah,
+        $satuan,
+        $urgensi,
+        $catatan
+    ]);
+
+    header("Location: index.php?msg=Instruksi pengadaan pasokan ($kode) berhasil dikirim ke Koperasi Primer.");
+    exit;
 }
 
 // PROSES 2: Update Progres Instruksi oleh Koperasi Primer / Konsumen
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'update_progres') {
-    $id_ins = (int)$_POST['id_instruksi'];
-    $status = $_POST['status_instruksi'];
-    $pdo->prepare("UPDATE instruksi_pasokan SET status_instruksi = ? WHERE id_instruksi = ?")->execute([$status, $id_ins]);
-    header("Location: index.php?msg=Status progres instruksi pasokan diperbarui menjadi: $status");
+    verify_csrf();
+    cekAkses(['konsumen', 'primer']);
+
+    $id_ins       = (int)($_POST['id_instruksi'] ?? 0);
+    $status       = $_POST['status_instruksi'] ?? '';
+    $valid_status = ['Terkirim ke Primer', 'Diteruskan ke Petani', 'Terpenuhi'];
+
+    if (!in_array($status, $valid_status, true)) {
+        header("Location: index.php?err=Status progres instruksi tidak valid.");
+        exit;
+    }
+
+    if ($role === 'primer') {
+        $id_primer_login = (int)($user['id_primer'] ?? 0);
+        $stmt = $pdo->prepare("UPDATE instruksi_pasokan SET status_instruksi = ? WHERE id_instruksi = ? AND id_primer = ?");
+        $stmt->execute([$status, $id_ins, $id_primer_login]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE instruksi_pasokan SET status_instruksi = ? WHERE id_instruksi = ?");
+        $stmt->execute([$status, $id_ins]);
+    }
+
+    if ($stmt->rowCount() > 0) {
+        header("Location: index.php?msg=Status progres instruksi pasokan diperbarui menjadi: " . urlencode($status));
+    } else {
+        header("Location: index.php?err=Instruksi tidak ditemukan atau bukan wewenang unit koperasi Anda.");
+    }
     exit;
 }
 
 require_once '../../includes/header.php';
 require_once '../../includes/sidebar.php';
 
-// Query Analisis Stok Kritis (< 50) + Total Permintaan Buyer per Produk
-$produk_analisis = $pdo->query("SELECT pr.*, kp.nama_koperasi, kp.kecamatan, d.nama_divisi,
-                                COALESCE((SELECT SUM(oi.qty) FROM order_items oi WHERE oi.id_produk = pr.id_produk), 0) AS total_terjual
-                                FROM produk_etalase pr
-                                JOIN koperasi_primer kp ON pr.id_primer = kp.id_primer
-                                JOIN divisi_wilayah d ON pr.id_divisi = d.id_divisi
-                                ORDER BY pr.stok ASC, total_terjual DESC")->fetchAll();
+// Query Analisis Stok Kritis (< 50) + Total Permintaan Buyer per Produk (Fail-closed untuk Primer & Petani)
+if (in_array($role, ['primer', 'petani'], true)) {
+    $stmtProd = $pdo->prepare("SELECT pr.*, kp.nama_koperasi, kp.kecamatan, d.nama_divisi,
+                               COALESCE((SELECT SUM(oi.qty) FROM order_items oi WHERE oi.id_produk = pr.id_produk), 0) AS total_terjual
+                               FROM produk_etalase pr
+                               JOIN koperasi_primer kp ON pr.id_primer = kp.id_primer
+                               JOIN divisi_wilayah d ON pr.id_divisi = d.id_divisi
+                               WHERE pr.id_primer = ?
+                               ORDER BY pr.stok ASC, total_terjual DESC");
+    $stmtProd->execute([(int)($user['id_primer'] ?? 0)]);
+    $produk_analisis = $stmtProd->fetchAll();
+} else {
+    $produk_analisis = $pdo->query("SELECT pr.*, kp.nama_koperasi, kp.kecamatan, d.nama_divisi,
+                                    COALESCE((SELECT SUM(oi.qty) FROM order_items oi WHERE oi.id_produk = pr.id_produk), 0) AS total_terjual
+                                    FROM produk_etalase pr
+                                    JOIN koperasi_primer kp ON pr.id_primer = kp.id_primer
+                                    JOIN divisi_wilayah d ON pr.id_divisi = d.id_divisi
+                                    ORDER BY pr.stok ASC, total_terjual DESC")->fetchAll();
+}
 
-// Pisahkan produk kritis (< 50)
 $stok_kritis = array_filter($produk_analisis, fn($p) => (int)$p['stok'] < 50);
 
-// Daftar Koperasi Primer untuk dropdown
-$primer_list = $pdo->query("SELECT kp.*, d.nama_divisi FROM koperasi_primer kp JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi ORDER BY d.nama_divisi ASC")->fetchAll();
+$primer_list = ($role === 'konsumen')
+    ? $pdo->query("SELECT kp.*, d.nama_divisi FROM koperasi_primer kp JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi ORDER BY d.nama_divisi ASC")->fetchAll()
+    : [];
 
-// Daftar Instruksi Pasokan yang sudah dikirim
-if ($role === 'primer' && !empty($user['id_primer'])) {
+// Daftar Instruksi Pasokan (Fail-closed untuk Primer & Petani)
+if (in_array($role, ['primer', 'petani'], true)) {
     $stmtIns = $pdo->prepare("SELECT ip.*, kp.nama_koperasi, kp.kecamatan, d.nama_divisi 
                               FROM instruksi_pasokan ip 
                               JOIN koperasi_primer kp ON ip.id_primer = kp.id_primer 
                               JOIN divisi_wilayah d ON kp.id_divisi = d.id_divisi 
                               WHERE ip.id_primer = ? ORDER BY ip.id_instruksi DESC");
-    $stmtIns->execute([$user['id_primer']]);
+    $stmtIns->execute([(int)($user['id_primer'] ?? 0)]);
     $instruksi_list = $stmtIns->fetchAll();
 } else {
     $instruksi_list = $pdo->query("SELECT ip.*, kp.nama_koperasi, kp.kecamatan, d.nama_divisi 
@@ -88,7 +126,7 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
         <span style="display:inline-block; background:#FEE2E2; color:#991B1B; font-size:11px; font-weight:800; padding:4px 12px; border-radius:99px; margin-bottom:6px;">
             EARLY WARNING SYSTEM • PROACTIVE SUPPLY RADAR
         </span>
-        <h2 style="margin:0 0 4px; font-size:22px; color:#0F172A;">Peringatan Stok Kritis & Prediksi Panen</h2>
+        <h2 style="margin:0 0 4px; font-size:22px; color:#0F172A;">Peringatan Stok Kritis &amp; Prediksi Panen</h2>
         <p style="margin:0; font-size:14px; color:#64748B;">
             Deteksi dini komoditas dengan stok menipis (&lt; 50) terhadap tren permintaan Buyer untuk memicu instruksi pasokan ke Koperasi Primer &amp; Petani.
         </p>
@@ -103,6 +141,12 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
 <?php if (isset($_GET['msg'])): ?>
 <div style="background:#DCFCE7; border:1px solid #86EFAC; color:#166534; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; font-size:13.5px;">
     ✓ <?= htmlspecialchars($_GET['msg']) ?>
+</div>
+<?php endif; ?>
+
+<?php if (isset($_GET['err'])): ?>
+<div style="background:#FEE2E2; border:1px solid #FCA5A5; color:#991B1B; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:700; font-size:13.5px;">
+    ✕ <?= htmlspecialchars($_GET['err']) ?>
 </div>
 <?php endif; ?>
 
@@ -140,7 +184,7 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
         <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13.5px;">
             <thead>
                 <tr style="background:#064E3B; color:#FFFFFF;">
-                    <th style="padding:13px 16px;">Produk & Asal Primer</th>
+                    <th style="padding:13px 16px;">Produk &amp; Asal Primer</th>
                     <th style="padding:13px 16px;">Sisa Stok Etalase</th>
                     <th style="padding:13px 16px;">Total Permintaan Buyer</th>
                     <th style="padding:13px 16px;">Rekomendasi Target Panen</th>
@@ -221,9 +265,9 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
         <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13.5px;">
             <thead>
                 <tr style="background:#F8FAFC; border-bottom:2px solid #E2E8F0; color:#475569;">
-                    <th style="padding:12px 16px;">Kode & Tanggal</th>
+                    <th style="padding:12px 16px;">Kode &amp; Tanggal</th>
                     <th style="padding:12px 16px;">Unit Koperasi Primer Tujuan</th>
-                    <th style="padding:12px 16px;">Komoditas & Target Volume</th>
+                    <th style="padding:12px 16px;">Komoditas &amp; Target Volume</th>
                     <th style="padding:12px 16px;">Catatan Instruksi Pusat</th>
                     <th style="padding:12px 16px;">Status Pemenuhan</th>
                 </tr>
@@ -250,8 +294,9 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
                         <?= htmlspecialchars($ins['catatan_pusat'] ?: 'Segera koordinasikan panen dengan kelompok tani binaan.') ?>
                     </td>
                     <td style="padding:12px 16px;">
-                        <?php if (in_array($role, ['konsumen', 'primer'])): ?>
+                        <?php if (in_array($role, ['konsumen', 'primer'], true)): ?>
                             <form method="POST" style="margin:0;">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="aksi" value="update_progres">
                                 <input type="hidden" name="id_instruksi" value="<?= $ins['id_instruksi'] ?>">
                                 <select name="status_instruksi" onchange="this.form.submit()" style="padding:6px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:12px; font-weight:700; background:<?= $ins['status_instruksi']==='Terpenuhi' ? '#DCFCE7' : '#FEF3C7' ?>; color:<?= $ins['status_instruksi']==='Terpenuhi' ? '#166534' : '#92400E' ?>; cursor:pointer;">
@@ -273,6 +318,7 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
     </div>
 </div>
 
+<?php if ($role === 'konsumen'): ?>
 <!-- MODAL KIRIM INSTRUKSI PASOKAN KE PRIMER & PETANI -->
 <div id="modalInstruksi" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:999; align-items:center; justify-content:center; padding:18px;">
     <div style="background:#FFFFFF; width:100%; max-width:520px; border-radius:20px; padding:28px; box-shadow:0 25px 50px rgba(0,0,0,0.25);">
@@ -285,6 +331,7 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
         </div>
 
         <form method="POST" style="display:flex; flex-direction:column; gap:13px;">
+            <?= csrf_field() ?>
             <input type="hidden" name="aksi" value="kirim_instruksi">
 
             <div>
@@ -316,7 +363,7 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
             <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:10px;">
                 <div>
                     <label style="font-size:12px; font-weight:700; color:#334155;">Target Volume</label>
-                    <input type="number" name="target_jumlah" id="ins_target" value="150" required style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #CBD5E1; border-radius:10px; margin-top:4px;">
+                    <input type="number" name="target_jumlah" id="ins_target" value="150" min="1" required style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #CBD5E1; border-radius:10px; margin-top:4px;">
                 </div>
                 <div>
                     <label style="font-size:12px; font-weight:700; color:#334155;">Satuan</label>
@@ -343,6 +390,7 @@ if ($role === 'primer' && !empty($user['id_primer'])) {
         </form>
     </div>
 </div>
+<?php endif; ?>
 
 <script>
 function openInstruksiModal(data = null) {
