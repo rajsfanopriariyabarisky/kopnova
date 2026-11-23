@@ -274,14 +274,14 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id_user`, `id_divisi`, `id_primer`, `nama_lengkap`, `username`, `password`, `role`, `no_hp`, `alamat`) VALUES
-(1, 1, NULL, 'Koperasi Konsumen Pusat (Nasional)', 'konsumen', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'konsumen', '081200000001', 'Kantor Pusat Koperasi Konsumen'),
-(2, 1, 1, 'Admin Primer Cikajang', 'primer', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'primer', '081200000002', 'Jl. Raya Cikajang No. 12'),
-(3, 1, 1, 'Kang Ujang (Petani Hortikultura)', 'petani', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'petani', '081200000003', 'Desa Girijaya, Kec. Cikajang'),
-(4, NULL, NULL, 'PT Agro Retail Nusantara (Buyer)', 'buyer', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'buyer', '081200000004', 'Kawasan Industri & Ritel Modern'),
-(5, 1, 2, 'Admin Primer Cisurupan', 'primer_cisurupan', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'primer', '081200000022', 'Jl. Raya Cisurupan No. 8, Garut'),
-(6, 2, 3, 'Admin Primer Pangalengan', 'primer_pangalengan', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'primer', '081200000023', 'Jl. Raya Pangalengan No. 45, Bandung'),
-(7, 2, 3, 'Pak Cecep (Petani Kopi Arabika)', 'petani_cecep', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'petani', '081200000032', 'Desa Margamulya, Kec. Pangalengan'),
-(8, NULL, NULL, 'CV Pangan Segar Mandiri (Buyer)', 'buyer_pangan', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'buyer', '081200000042', 'Pasar Induk Kramat Jati, Jakarta Timur');
+(1, 1, NULL, 'Koperasi Konsumen Pusat (Nasional)', 'konsumen', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'konsumen', '081200000001', 'Kantor Pusat Koperasi Konsumen'),
+(2, 1, 1, 'Admin Primer Cikajang', 'primer', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'primer', '081200000002', 'Jl. Raya Cikajang No. 12'),
+(3, 1, 1, 'Kang Ujang (Petani Hortikultura)', 'petani', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'petani', '081200000003', 'Desa Girijaya, Kec. Cikajang'),
+(4, NULL, NULL, 'PT Agro Retail Nusantara (Buyer)', 'buyer', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'buyer', '081200000004', 'Kawasan Industri & Ritel Modern'),
+(5, 1, 2, 'Admin Primer Cisurupan', 'primer_cisurupan', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'primer', '081200000022', 'Jl. Raya Cisurupan No. 8, Garut'),
+(6, 2, 3, 'Admin Primer Pangalengan', 'primer_pangalengan', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'primer', '081200000023', 'Jl. Raya Pangalengan No. 45, Bandung'),
+(7, 2, 3, 'Pak Cecep (Petani Kopi Arabika)', 'petani_cecep', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'petani', '081200000032', 'Desa Margamulya, Kec. Pangalengan'),
+(8, NULL, NULL, 'CV Pangan Segar Mandiri (Buyer)', 'buyer_pangan', '$2y$12$KN.yA0OOkNzCnE1hVsaLrO07KQqtpscSBX3K.xnDBb3Qf7MiZ72Sa', 'buyer', '081200000042', 'Pasar Induk Kramat Jati, Jakarta Timur');
 
 --
 -- Indexes for dumped tables
@@ -490,3 +490,8 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+ALTER TABLE `settlement_dana`
+  ADD UNIQUE KEY `uniq_order_primer` (`id_order`, `id_primer`),
+  ADD CONSTRAINT `fk_settlement_order` FOREIGN KEY (`id_order`) REFERENCES `orders` (`id_order`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_settlement_primer` FOREIGN KEY (`id_primer`) REFERENCES `koperasi_primer` (`id_primer`) ON DELETE CASCADE;

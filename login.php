@@ -11,8 +11,10 @@ $error = $_GET['error'] ?? '';
 $selected_role = $_GET['role'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
+    verify_csrf();
+
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? '');
 
     $stmt = $pdo->prepare("SELECT u.*, d.nama_divisi, p.nama_koperasi, p.kecamatan 
                            FROM users u 
@@ -22,8 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    if ($user && ($password === '123' || password_verify($password, $user['password']))) {
+    // Hapus backdoor '123' plaintext; murni gunakan password_verify()
+    if ($user && password_verify($password, $user['password'])) {
+        session_regenerate_id(true);
+        unset($user['password']);
         $_SESSION['user'] = $user;
+
         header("Location: modules/dashboard/index.php");
         exit;
     } else {
@@ -103,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <form method="POST" style="display:flex; flex-direction:column; gap:16px;">
+                    <?= csrf_field() ?>
                     <div>
                         <label style="display:block; font-size:13px; font-weight:600; color:#E2EFEA; margin-bottom:6px;">Username</label>
                         <input type="text" name="username" id="usernameInput" value="<?= htmlspecialchars($selected_role) ?>" placeholder="Enter your username" required
