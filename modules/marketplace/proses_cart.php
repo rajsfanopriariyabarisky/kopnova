@@ -2,7 +2,7 @@
 require_once '../../config/database.php';
 cekAkses(['buyer']);
 
-if (!isset($_SESSION['cart'])) {
+if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
@@ -14,43 +14,115 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 verify_csrf();
 $aksi = $_POST['aksi'] ?? '';
 
-// 1. Tambah ke keranjang
+// 1. Tambah ke keranjang (tervalidasi terhadap stok database)
 if ($aksi === 'add') {
     $id  = (int)($_POST['id_produk'] ?? 0);
     $qty = max(1, (int)($_POST['qty'] ?? 1));
 
-    if ($id > 0) {
-        $_SESSION['cart'][$id] = ($_SESSION['cart'][$id] ?? 0) + $qty;
+    if ($id <= 0) {
+        header("Location: index.php?err=" . urlencode("Produk tidak valid."));
+        exit;
     }
-    header("Location: index.php?msg=Produk berhasil ditambahkan ke keranjang belanja.");
+
+    $stmt = $pdo->prepare("SELECT nama_produk, satuan, stok FROM produk_etalase WHERE id_produk = ? LIMIT 1");
+    $stmt->execute([$id]);
+    $produk = $stmt->fetch();
+
+    if (!$produk || (int)$produk['stok'] <= 0) {
+        header("Location: index.php?err=" . urlencode("Maaf, stok produk tersebut sedang habis."));
+        exit;
+    }
+
+    $stok_tersedia = (int)$produk['stok'];
+    $qty_lama      = (int)($_SESSION['cart'][$id] ?? 0);
+    $qty_baru      = min($stok_tersedia, $qty_lama + $qty);
+
+    $_SESSION['cart'][$id] = $qty_baru;
+
+    if ($qty_lama + $qty > $stok_tersedia) {
+        $msg = "Jumlah '{$produk['nama_produk']}' di keranjang disesuaikan ke batas stok maksimum ({$stok_tersedia} {$produk['satuan']}).";
+    } else {
+        $msg = "Produk '{$produk['nama_produk']}' berhasil ditambahkan ke keranjang belanja.";
+    }
+
+    header("Location: index.php?msg=" . urlencode($msg));
     exit;
 }
 
-// 2. Hapus dari keranjang (Wajib POST + CSRF)
+// 2. Perbarui jumlah item di keranjang
+if ($aksi === 'update') {
+    $id  = (int)($_POST['id_produk'] ?? 0);
+    $qty = (int)($_POST['qty'] ?? 1);
+
+    if ($id <= 0 || !isset($_SESSION['cart'][$id])) {
+        header("Location: keranjang.php");
+        exit;
+    }
+
+    if ($qty <= 0) {
+        unset($_SESSION['cart'][$id]);
+        header("Location: keranjang.php?msg=" . urlencode("Produk dihapus dari keranjang."));
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT nama_produk, satuan, stok FROM produk_etalase WHERE id_produk = ? LIMIT 1");
+    $stmt->execute([$id]);
+    $produk = $stmt->fetch();
+
+    if (!$produk || (int)$produk['stok'] <= 0) {
+        unset($_SESSION['cart'][$id]);
+        header("Location: keranjang.php?err=" . urlencode("Produk dihapus karena stok sudah habis."));
+        exit;
+    }
+
+    $stok_tersedia         = (int)$produk['stok'];
+    $qty_final             = min($stok_tersedia, $qty);
+    $_SESSION['cart'][$id] = $qty_final;
+
+    if ($qty > $stok_tersedia) {
+        header("Location: keranjang.php?err=" . urlencode("Stok '{$produk['nama_produk']}' hanya tersedia {$stok_tersedia} {$produk['satuan']}."));
+    } else {
+        header("Location: keranjang.php?msg=" . urlencode("Jumlah '{$produk['nama_produk']}' diperbarui menjadi {$qty_final} {$produk['satuan']}."));
+    }
+    exit;
+}
+
+// 3. Hapus dari keranjang (Wajib POST + CSRF)
 if ($aksi === 'hapus') {
     $id = (int)($_POST['id_produk'] ?? 0);
     unset($_SESSION['cart'][$id]);
-    header("Location: keranjang.php?msg=Produk dihapus dari keranjang.");
+    header("Location: keranjang.php?msg=" . urlencode("Produk berhasil dihapus dari keranjang."));
     exit;
 }
 
-// 3. Checkout -> Kunci Stok (FOR UPDATE) & Buat Order Atomik
-if ($aksi === 'checkout' && !empty($_SESSION['cart'])) {
+// 4. Checkout -> Kunci Stok (FOR UPDATE) & Buat Order Atomik
+if ($aksi === 'checkout') {
+    if (empty($_SESSION['cart'])) {
+        header("Location: keranjang.php?err=" . urlencode("Keranjang belanja Anda masih kosong."));
+        exit;
+    }
+
+    $metode_valid = ['QRIS Instan', 'Transfer Virtual Account', 'Termin B2B'];
     $metode_bayar = trim($_POST['metode_bayar'] ?? '');
     $alamat       = trim($_POST['alamat_pengiriman'] ?? '');
 
-    if ($metode_bayar === '' || $alamat === '') {
-        header("Location: keranjang.php?err=Metode pembayaran dan alamat pengiriman wajib diisi.");
+    if (!in_array($metode_bayar, $metode_valid, true)) {
+        header("Location: keranjang.php?err=" . urlencode("Metode pembayaran yang dipilih tidak valid."));
+        exit;
+    }
+
+    if ($alamat === '') {
+        header("Location: keranjang.php?err=" . urlencode("Alamat pengiriman wajib diisi lengkap."));
         exit;
     }
 
     $pdo->beginTransaction();
     try {
-        $cartIds = array_map('intval', array_keys($_SESSION['cart']));
+        $cartIds      = array_map('intval', array_keys($_SESSION['cart']));
         $placeholders = implode(',', array_fill(0, count($cartIds), '?'));
 
         // Row-level lock mencegah race condition / overselling saat checkout bersamaan
-        $stmt = $pdo->prepare("SELECT * FROM produk_etalase WHERE id_produk IN ($placeholders) FOR UPDATE");
+        $stmt = $pdo->prepare("SELECT * FROM produk_etalase WHERE id_produk IN ({$placeholders}) FOR UPDATE");
         $stmt->execute($cartIds);
         $produk_db = $stmt->fetchAll();
 
@@ -68,12 +140,28 @@ if ($aksi === 'checkout' && !empty($_SESSION['cart'])) {
         }
 
         $no_invoice = "INV-KPN-" . date('Ymd') . "-" . random_int(100, 999);
-        $insOrder = $pdo->prepare("INSERT INTO orders (no_invoice, id_buyer, total_bayar, metode_bayar, alamat_pengiriman) VALUES (?, ?, ?, ?, ?)");
-        $insOrder->execute([$no_invoice, $_SESSION['user']['id_user'], $total_bayar, $metode_bayar, $alamat]);
-        $id_order = $pdo->lastInsertId();
+        $insOrder   = $pdo->prepare("
+            INSERT INTO orders (no_invoice, id_buyer, total_bayar, metode_bayar, alamat_pengiriman)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $insOrder->execute([
+            $no_invoice,
+            (int)$_SESSION['user']['id_user'],
+            $total_bayar,
+            $metode_bayar,
+            $alamat
+        ]);
+        $id_order = (int)$pdo->lastInsertId();
 
-        $insItem = $pdo->prepare("INSERT INTO order_items (id_order, id_produk, qty, harga_satuan, subtotal) VALUES (?, ?, ?, ?, ?)");
-        $updStok = $pdo->prepare("UPDATE produk_etalase SET stok = stok - ? WHERE id_produk = ? AND stok >= ?");
+        $insItem = $pdo->prepare("
+            INSERT INTO order_items (id_order, id_produk, qty, harga_satuan, subtotal)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $updStok = $pdo->prepare("
+            UPDATE produk_etalase
+            SET stok = stok - ?
+            WHERE id_produk = ? AND stok >= ?
+        ");
 
         foreach ($produk_db as $p) {
             $qty = (int)$_SESSION['cart'][$p['id_produk']];
@@ -89,12 +177,16 @@ if ($aksi === 'checkout' && !empty($_SESSION['cart'])) {
 
         $pdo->commit();
         unset($_SESSION['cart']);
-        header("Location: ../transaksi/index.php?msg=Pesanan $no_invoice berhasil dibuat dan diteruskan ke Koperasi Konsumen.");
+        header("Location: ../transaksi/index.php?msg=" . urlencode("Pesanan {$no_invoice} berhasil dibuat dan diteruskan ke Koperasi Konsumen."));
         exit;
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         header("Location: keranjang.php?err=" . urlencode($e->getMessage()));
         exit;
     }
 }
-?>
+
+header("Location: index.php");
+exit;
